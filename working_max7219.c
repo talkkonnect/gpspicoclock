@@ -7,11 +7,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include <termios.h>
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
 #include "hardware/spi.h"
 #include "hardware/uart.h"
+
 
 /* Example code to talk to a Max7219 driving an 8 digit 7 segment display via SPI
 
@@ -104,7 +104,7 @@ void display_num(int32_t num)
         write_register_all(CMD_DIGIT0 + digit, num % 10);
         num /= 10;
         digit++;
-    }        
+    }
 }
 
 void clear()
@@ -117,8 +117,8 @@ void clear()
 
 int main() {
 
-char buffer[BUFFSIZE];
-char gga[BUFFSIZE];
+char buffer[BUFFSIZE] = "";
+char time[BUFFSIZE] = "" ;
 
   uart_init(UART0_ID, BAUD0_RATE);
   gpio_set_function(UART0_TX_PIN, UART0_TX_PIN);
@@ -139,10 +139,10 @@ char gga[BUFFSIZE];
 
 
 
-stdio_init_all();
+//stdio_init_all();
 
-    puts("Default SPI pins were not defined");
-    printf("Hello, max7219! Drawing things on a 8 x 7 segment display since 2022...\n");
+//    puts("Default SPI pins were not defined");
+//    printf("Hello, max7219! Drawing things on a 8 x 7 segment display since 2022...\n");
 
     // This example will use SPI0 at 10MHz.
     spi_init(spi_default, 10 * 1000 * 1000);
@@ -171,27 +171,68 @@ stdio_init_all();
 
     clear();
 
-    int i = 0; 
+    int i = 0;
     int j = 0;
+    bool startchar1 = false;
+    bool startchar2 = false;
+    bool startchar3 = false;
+    bool endchar1 = false;
+    bool endchar2 = false;
 
+    char c;
     while (true) {
       while (uart_is_readable(uart0))  {
-        char c;
         c = uart_getc(uart0);
-        i++;
-        if ((c != '\n\') && (i< BUFFSIZE -1)) {
-            buffer[i++] = c;
-        } 
-      }  
-    }
+	i++;
+	if (c == 10) {
+	   endchar1 = true;
+           endchar2 = false;
+	}
+	if ((c == 13) && (endchar1 == true)) {
+             endchar2 = true;
+	}
+	// End of Sentence
+	if (endchar1 == true && endchar2 == true) {
+	   buffer[i] = '\0';
+	   //uart_puts(UART1_ID,buffer); // open this for debugging
+	   if (strstr(buffer, "GGA")) {
+	   	//uart_puts(UART1_ID,buffer);
+		strncpy(time, buffer+9, 6);
+		time[7] = "\0";
+	   	uart_puts(UART1_ID,time);
+	   	uart_puts(UART1_ID,"\n");
+		display_num(atoi(time));
+	   }
+	   endchar1 == false;
+           endchar2 == false;
 
-      sleep_ms(1);
-    }
-        // sleep_ms(1);
-        // if (j > 99999999) {
-        //     j = 0;
-        // }
-    }
+        }
 
-    return 0;
+	if (c == 36) {
+           startchar1 = true;
+	   startchar2 == false;
+	   startchar3 == false;
+	}
+	if ((startchar1 == true) && (c == 71)) {
+           startchar2 = true;
+	   startchar3 == false;
+	}
+	if ((startchar1 == true) && (startchar2 == true) && (c == 80)) {
+           startchar3 = true;
+	}
+	// Beginning of Sentence
+	if (endchar1 == true && endchar2 == true) {
+	   i = 0;
+	   startchar1 == false;
+	   startchar2 == false;
+	   startchar3 == false;
+        }
+
+        if (i< BUFFSIZE -1) {
+            buffer[i] = c;
+        }
+
+     }
+   }
 }
+
