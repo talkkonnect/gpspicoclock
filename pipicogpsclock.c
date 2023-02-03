@@ -1,7 +1,7 @@
 /**
- * Copyright (c) 2022 Raspberry Pi (Trading) Ltd.
  *
- * SPDX-License-Identifier: BSD-3-Clause
+ *
+ *
  */
 
 #include <stdio.h>
@@ -58,6 +58,7 @@ const uint8_t CMD_BRIGHTNESS = 10;
 const uint8_t CMD_SCANLIMIT = 11;
 const uint8_t CMD_SHUTDOWN = 12;
 const uint8_t CMD_DISPLAYTEST = 15;
+const int     LOCALTIMEZONE = 7;
 
 #ifdef PICO_DEFAULT_SPI_CSN_PIN
 static inline void cs_select() {
@@ -117,15 +118,22 @@ void clear()
 
 int main() {
 
-char buffer[BUFFSIZE] = "";
-char time[BUFFSIZE] = "" ;
+char buffer[BUFFSIZE] = "" ;
+char timed1[BUFFSIZE] = "" ;
+char timed2[BUFFSIZE] = "" ;
+char timed3[BUFFSIZE] = "" ;
+char timed4[BUFFSIZE] = "" ;
+char timed5[BUFFSIZE] = "" ;
+char timed6[BUFFSIZE] = "" ;
+char utchours[BUFFSIZE] = "" ;
+char localhourss[BUFFSIZE] = "" ;
 
   uart_init(UART0_ID, BAUD0_RATE);
   gpio_set_function(UART0_TX_PIN, UART0_TX_PIN);
   gpio_set_function(UART0_RX_PIN, UART0_RX_PIN);
   uart_set_hw_flow(UART0_ID, false, false);
   uart_set_format(UART0_ID, DATA0_BITS, STOP0_BITS, PARITY0);
-  
+
   uart_init(UART1_ID, BAUD1_RATE);
   gpio_set_function(UART1_TX_PIN, UART1_TX_PIN);
   gpio_set_function(UART1_RX_PIN, UART1_RX_PIN);
@@ -178,8 +186,9 @@ char time[BUFFSIZE] = "" ;
     bool startchar3 = false;
     bool endchar1 = false;
     bool endchar2 = false;
-
+    int localhours = 0;
     char c;
+
     while (true) {
       while (uart_is_readable(uart0))  {
         c = uart_getc(uart0);
@@ -191,17 +200,36 @@ char time[BUFFSIZE] = "" ;
 	if ((c == 13) && (endchar1 == true)) {
              endchar2 = true;
 	}
-	// End of Sentence
+	// Find End of Sentence
 	if (endchar1 == true && endchar2 == true) {
 	   buffer[i] = '\0';
 	   //uart_puts(UART1_ID,buffer); // open this for debugging
 	   if (strstr(buffer, "GGA")) {
-	   	//uart_puts(UART1_ID,buffer);
-		strncpy(time, buffer+9, 6);
-		time[7] = "\0";
-	   	uart_puts(UART1_ID,time);
-	   	uart_puts(UART1_ID,"\n");
-		display_num(atoi(time));
+	   	uart_puts(UART1_ID,buffer);
+	   	//uart_puts(UART1_ID,time);
+	   	//uart_puts(UART1_ID,"\n");
+
+                //strip out the UTC time from the GGA Sentence
+		strncpy(utchours, buffer+9, 2);
+		localhours = atoi(utchours) + LOCALTIMEZONE;
+		if (localhours > 23) {
+		  localhours = localhours -24;
+		}
+		localhourss[0] = itoa(localhours);
+		strncpy(timed6, localhourss, 1);
+		strncpy(timed5, localhourss+1, 1);
+		strncpy(timed4, buffer+11, 1);
+		strncpy(timed3, buffer+12, 1);
+		strncpy(timed2, buffer+13, 1);
+		strncpy(timed1, buffer+14, 1);
+		write_register(1,atoi(timed1));
+		write_register(2,atoi(timed2));
+		write_register(3,10);
+		write_register(4,atoi(timed3));
+		write_register(5,atoi(timed4));
+		write_register(6,10);
+		write_register(7,atoi(timed5));
+		write_register(8,atoi(timed6));
 	   }
 	   endchar1 == false;
            endchar2 == false;
@@ -220,7 +248,7 @@ char time[BUFFSIZE] = "" ;
 	if ((startchar1 == true) && (startchar2 == true) && (c == 80)) {
            startchar3 = true;
 	}
-	// Beginning of Sentence
+	// Find Beginning of Sentence
 	if (endchar1 == true && endchar2 == true) {
 	   i = 0;
 	   startchar1 == false;
@@ -233,6 +261,7 @@ char time[BUFFSIZE] = "" ;
         }
 
      }
+   sleep_ms(1);
    }
 }
 
