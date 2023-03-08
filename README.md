@@ -13,7 +13,9 @@ a GPS atomic clock with a NEO-6M GPS module, Pi Pico and a MAX7219 Board as a di
 I wanted a clock that would work without any internet connection with accurate time and 
 work right away after power up without any settting required.
 
-The Circuit diagram is provided in PDF format and so is the software provided.
+The Circuit diagram is provided in PDF format and so is the software provided. With Power 
+regulator on board and also 74LC245 Buffer you can drive 1 local display and 2 displays
+with a long cable up to 30 meters, so all in all you can have 3 clocks in your setup.
 
 I used a raspberry pi 3 for the compiler and loader to the pi pico for development and debugging.
 
