@@ -23,5 +23,5 @@ A practical project for learning and fun!
 
 Suvir Kumar 08/03/2023
 
-![image](https://raw.github.com/talkkonnect/gpspicoclock/master/images/gpsclock.jpg)
+![image](https://raw.github.com/talkkonnect/gpspicoclock/master/gpsclock.jpg)
 
